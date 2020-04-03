@@ -1,3 +1,6 @@
+import numpy as np
+from respect.eigenmaps import eigenmap
+
 class RecursivePartitioning(object):
     
     """
@@ -42,7 +45,7 @@ class RecursivePartitioning(object):
         inds = np.arange(D.shape[0])
 
         print('Recursion step.')
-        [clust, idx, depths, evx] = self._eigendepths(D, inds, 
+        [clust, idx, depths, evx] = self._split(D, inds, 
                                                      [], [], [], [], 0)
 
         print('Aggregation step.')
@@ -51,7 +54,7 @@ class RecursivePartitioning(object):
         self.clusters_ = clusters
         self.eigenvectors_ = eigenvectors
         
-    def _eigendepths(self, S, indices, 
+    def _split(self, S, indices, 
                      init_clusters, init_inds, init_depths, init_evecs, 
                      current_depth):
         
@@ -78,7 +81,7 @@ class RecursivePartitioning(object):
         else:
 
             # compute eigenmaps of current similarity matrix
-            y = eigenmaps.eigenmap(S, self.evecs)
+            y = eigenmap(S, self.evecs)
 
             # get fielder vector
             f = y[:, 1]
@@ -102,11 +105,11 @@ class RecursivePartitioning(object):
             init_inds.append(nix)
             
             init_depths.append(current_depth)
-            py = eigenmaps.eigenmap(pd, self.evecs)
+            py = eigenmap(pd, self.evecs)
             py = self._signcorrect(py, pix)
             py = (py - py.min(0)) / (py.max(0) - py.min(0))
             
-            ny = eigenmaps.eigenmap(nd, self.evecs)
+            ny = eigenmap(nd, self.evecs)
             ny = self._signcorrect(ny, nix)
             ny = (ny - ny.min(0)) / (ny.max(0) - ny.min(0))
 
@@ -114,17 +117,18 @@ class RecursivePartitioning(object):
             init_evecs.append(py[:, 1:])
             init_evecs.append(ny[:, 1:])
             
-            g = self._eigendepths(pd, pix, 
+            g = self._split(pd, pix, 
                            init_clusters, init_inds, init_depths, init_evecs, 
                            current_depth+1)
             
             # right branch
-            g = self._eigendepths(nd, nix, 
+            g = self._split(nd, nix, 
                            init_clusters, init_inds, init_depths, init_evecs, 
                            current_depth+1)
         
         return [init_clusters, init_inds, init_depths, init_evecs]
     
+
     def _combine(self, clusters, indices, depths, evecs):
         
         """
